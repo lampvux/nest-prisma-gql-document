@@ -13,12 +13,15 @@ import { SignUserInfo } from 'src/auth/sign-user-info';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { GraphQLUpload, FileUpload } from 'graphql-upload';
-
+import { UploadLibraryService } from '@app/upload-library';
 
 @Resolver(() => Document)
 @UseGuards(GqlAuthGuard)
 export class DocumentResolver {
-  constructor(protected readonly documentService: DocumentService) {}
+  constructor(
+    protected readonly documentService: DocumentService,
+    private uploadLib: UploadLibraryService,
+  ) {}
 
   @Query(() => [Document])
   async documents(
@@ -47,19 +50,13 @@ export class DocumentResolver {
     @Args('file', { type: () => GraphQLUpload }) file: FileUpload,
   ) {
     try {
-      
-      const {
-        name,
-        size,
-        path,
-        etag,
-      } = await 
+      const { name, size, path, etag } = await this.uploadLib.uploadFile(file);
 
       return await this.documentService.create({
         data: {
-          name: filename,
-          size: fileSize,
-          path: filePath,
+          name: name,
+          size: size.toString(),
+          path: path,
           etag: etag,
           authorId: user.id,
           ...data,

@@ -79,6 +79,13 @@ export class UploadLibraryService {
           );
         }
         const etag = md5Hex(buffer);
+
+        return {
+          name: originalname,
+          size: size,
+          path: path,
+          etag: etag,
+        };
       }
     } catch (error) {
       throw new ForbiddenException('error: ', error);
