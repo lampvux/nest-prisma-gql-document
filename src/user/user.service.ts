@@ -1,18 +1,25 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
+import { PasswordService } from '../auth/password/password.service';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
-
-  findAll() {
-    return `This action returns all user`;
+  constructor(
+    protected readonly prisma: PrismaService,
+    protected readonly passwordService: PasswordService,
+  ) {}
+  async create<T extends Prisma.UserCreateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.UserCreateArgs>,
+  ): Promise<User> {
+    return this.prisma.user.create<T>({
+      ...args,
+      data: {
+        ...args.data,
+        password: await this.passwordService.hash(args.data.password),
+      },
+    });
   }
 
   async findOne<T extends Prisma.UserFindUniqueArgs>(
@@ -21,11 +28,21 @@ export class UserService {
     return this.prisma.user.findUnique(args);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update<T extends Prisma.UserUpdateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.UserUpdateArgs>,
+  ): Promise<User> {
+    return this.prisma.user.update<T>({
+      ...args,
+      data: {
+        ...args.data,
+        password:
+          args.data.password &&
+          (await this.passwordService.hash(args.data.password.toString())),
+      },
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number): Promise<User> {
+    return this.prisma.user.delete({ where: { id } });
   }
 }
